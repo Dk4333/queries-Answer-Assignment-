@@ -11,35 +11,43 @@
 ---
 
 ## Architecture Overview
-      ┌──────────────────────────────┐
-      │          User Input           │
-      │(Enter webpage URL/upload itinary
-       + query)      │
-      └──────────────┬───────────────┘
-                     │
-             [1] WebPageLoader/document loaders
-                     │
-      ┌──────────────▼───────────────┐
-      │    Text Extraction & Split    │
-      │ (RecursiveCharacterTextSplitter)
-      └──────────────┬───────────────┘
-                     │
-             [2] Embeddings (OpenAI/HF)
-                     │
-      ┌──────────────▼───────────────┐
-      │      Vector Store (FAISS)    │
-      │   + Similarity Search Index  │
-      └──────────────┬───────────────┘
-                     │
-              [3] LangChain Retriever
-                     │
-      ┌──────────────▼───────────────┐
-      │   Chat Model (LLM Interface)  │
-      │  (OpenAI / Gemini / Local LLM)│
-      └──────────────┬───────────────┘
-                     │
-             Response to User
+                     ┌──────────────────────────┐
+                     │    User (Web UI)          │
+                     │  - Types a question       │
+                     │  - Clicks Ask             │
+                     └─────────────┬─────────────┘
+                                   │  (POST Request)
+                                   ▼
+                     ┌──────────────────────────┐
+                     │        Flask Backend      │
+                     │        (app.py)           │
+                     │ - Receives question       │
+                     │ - Calls RAG engine        │
+                     └─────────────┬─────────────┘
+                                   │
+                                   ▼
+                 ┌──────────────────────────────────────────┐
+                 │               RAG Engine                 │
+                 │             (tripfactory.py)             │
+                 └──────────────────┬───────────────────────┘
+                                    │
+         ┌──────────────────────────┼──────────────────────────┐
+         ▼                          ▼                          ▼
+┌────────────────┐       ┌──────────────────────┐     ┌────────────────────────┐
+│ Itinerary Data │       │   Retriever (FAISS)  │     │     LLM (OpenAI)        │
+│ (itinerary.txt)│       │ - Embeds chunks      │     │ - Uses strict prompt    │
+│ - Raw text     │       │ - Top-k similarity   │     │ - Answers ONLY using    │
+│ - Split chunks │──────▶│   search             │────▶│   retrieved context     │
+└────────────────┘       └──────────────────────┘     │ - Returns fallback if   │
+                                                      │   info not present      │
+                                                      └────────────────────────┘
 
+                                   │
+                                   ▼
+                      ┌───────────────────────────────┐
+                      │   Final Answer (Flask UI)      │
+                      │ - Rendered back to the user    │
+                      └───────────────────────────────┘
 ---
 
 ##  Tech Stack
